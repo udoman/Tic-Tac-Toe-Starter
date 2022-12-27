@@ -37,61 +37,18 @@ import './index.css';
   }
   
   class Board extends React.Component {
-
-    constructor(props){
-      super(props);
-      //created a constructors for Board in order to keep track of what is X and O or Null
-      //we are using an array in this case started it with all null at first
-      this.state = {
-        squares: new Array(9).fill(null), 
-        xIsNext: true,
-      };
-    }
-
-    handleClick(i){
-      const squares = this.state.squares.slice();
-      //debugger;
-      //two conditiosn is to exit early being that if what we just updated is the last piece to getting a tic tac toe
-      //second condition is to account for when a user has already clicked it.
-      //meaning that if square[i] != null then it will return
-      //basically this statements translate to calculateWinner(squares) != null or squares[i] != null because then that will be true
-      if (calculateWinner(squares) || squares[i]) //0 is false and if statement checks for True, null is false as well
-      {
-        return;
-      }
-      squares[i] = this.state.xIsNext ? 'X' : 'O';
-      this.setState({squares:squares,
-      xIsNext: !this.state.xIsNext, //we are this this.state.xIsNext because we want to update what it is currently and not just assume it will always be false
-    });
-    }
-
-    //this is a function within a class, don't need function tag. 
-    //he we just created a function to render a value using the square object.
     renderSquare(i) {
-      //then here we are updating it accordingly, and since we can't update the value of the square
-      //because the props of a component is private, we can pass it whenever that square is click.
-      //basically when this square is clicked on the board, it will calls the click functionality in square?
-      return <Square value={this.state.squares[i]}  //if you look at how square is using this.props.value and this.props.onClick, these stuff are just being passed into square from board
-      onClick={() => this.handleClick(i)}
-      />  //parent to child relationship here becuase board is the parent and is passing data to the child component aka square
+      return (
+        <Square
+          value={this.props.squares[i]}
+          onClick={() => this.props.onClick(i)}
+        />
+      );
     }
   
-    //render here is the react function to pull components and it gets compiled to be shown on webpage
     render() {
-      const winner = calculateWinner(this.state.squares);
-      let status;
-      if (winner != null){
-        status = 'Winner: ' + winner;
-      }
-      else
-      {
-        status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
-      }
-
-  
       return (
         <div>
-          <div className="status">{status}</div>
           <div className="board-row">
             {this.renderSquare(0)}
             {this.renderSquare(1)}
@@ -112,16 +69,82 @@ import './index.css';
     }
   }
   
+
+  //we will need to add history and in order to do that we will keep that info in the Game component
+  //lifting it out of the board component now
   class Game extends React.Component {
+    constructor(props){
+      super(props);
+      this.state = {
+        history: [{squares: Array(9).fill(null)}],
+        stepNumber: 0,
+        xIsNext: true,
+      }
+    }
+
+    handleClick(i) {
+      const history = this.state.history.slice(0, this.state.stepNumber+1);
+      const current = history[history.length-1];
+      const squares = current.squares.slice();
+      if (calculateWinner(squares) || squares[i]) {
+        return;
+      }
+      squares[i] = this.state.xIsNext ? 'X' : 'O';
+      this.setState({
+        history: history.concat([{
+          squares: squares,
+        }]),
+        stepNumber: history.length,
+        xIsNext: !this.state.xIsNext,
+      });
+      console.log(this.state.history)
+    }
+
+    jumpTo(step)
+    {
+      this.setState({
+        stepNumber: step,
+        xIsNext: (step%2) === 0,
+      })
+
+    }
+
     render() {
+      const history = this.state.history;
+      const current = history[this.state.stepNumber];
+      const winner = calculateWinner(current.squares);
+
+      const moves = history.map((step, move) => {
+        const desc = move ? 'Go to move #' + move : 'Go to game start'; //here if move is not 0 then goes to move # else just game start which is beginning since move = 0
+        return (
+          <li key={move}>
+            <button onClick = {() => this.jumpTo(move)}>
+              {desc}
+            </button>
+          </li>
+        )
+      });
+
+
+      let status;
+      if (winner)
+      {
+        status = 'Winner: ' + winner;
+      }
+      else
+      {
+        status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
+      }
       return (
         <div className="game">
           <div className="game-board">
-            <Board />
+            <Board squares={current.squares}
+            onClick={(i) => this.handleClick(i)}
+            />
           </div>
           <div className="game-info">
-            <div>{/* status */}</div>
-            <ol>{/* TODO */}</ol>
+            <div>{status}</div>
+            <ol>{moves}</ol>
           </div>
         </div>
       );
